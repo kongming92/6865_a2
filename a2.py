@@ -10,15 +10,31 @@ import imageIO as io
 
 def check_my_module():
    ''' Fill your signature here. When upload your code, check if the signature is correct'''
-   my_signature='Fill my signature'
-   return my_signature 
+   my_signature='Charles Liu'
+   return my_signature
 
-   
+# HELPER FUNCTIONS AS DEFINED IN CLASS
 def imIter(im):
     for y in range(0,im.shape[0]):
         for x in range(0,im.shape[1]):
             yield (y,x)
 
+def getBlackPadded(im, y, x):
+    if (x<0) or (x>=im.shape[1]) or (y<0) or (y>= im.shape[0]):
+        return np.array([0, 0, 0])
+    else:
+        return im[y, x]
+
+def clipX(im, x):
+    return min(im.shape[1] - 1, max(x, 0))
+
+def clipY(im, y):
+    return min(im.shape[0] - 1, max(y, 0))
+
+def getSafePix(im, y, x):
+    return im[clipY(im, y), clipX(im, x)];
+
+# END HELPER FUNCTIONS
 
 def pix(im, y, x, repeatEdge=False):
     '''takes an image, y and x coordinates, and a bool
@@ -26,27 +42,63 @@ def pix(im, y, x, repeatEdge=False):
         If y,x is outside the image and repeatEdge==True , you should return the nearest pixel in the image
         If y,x is outside the image and repeatEdge==False , you should return a black pixel
     '''
-
+    return getSafePix(im, y, x) if repeatEdge else getBlackPadded(im, y, x)
 
 def scaleNN(im, k):
     '''Takes an image and a scale factor. Returns an image scaled using nearest neighbor interpolation.
     '''
-    
+    out = io.constantIm(im.shape[0] * k, im.shape[1] * k, 0)
+    for y, x in imIter(out):
+        origY = clipY(im, int(round(y/k)))
+        origX = clipX(im, int(round(x/k)))
+        out[y, x] = im[origY, origX]
+
+    return out
 
 def interpolateLin(im, y, x, repeatEdge=False):
     '''takes an image, y and x coordinates, and a bool
         returns the interpolated pixel value using bilinear interpolation
     '''
+    x0 = int(math.floor(x))
+    x1 = int(math.ceil(x))
+    y0 = int(math.floor(y))
+    y1 = int(math.ceil(y))
 
-def scaleLin(im, k):
+    if x0 == x1:
+        temp0 = pix(im, y0, x0, repeatEdge)
+        temp1 = pix(im, y1, x0, repeatEdge)
+    else:
+        # Interpolate between x's at y = y0
+        temp0 = (x1 - x) * pix(im, y0, x0, repeatEdge) + (x - x0) * pix(im, y0, x1, repeatEdge)
+        # Interpolate between x's at y = y1
+        temp1 = (x1 - x) * pix(im, y1, x0, repeatEdge) + (x - x0) * pix(im, y1, x1, repeatEdge)
+
+    if y0 == y1:
+        return temp0
+    # Otherwise, interpolate between y's
+    return (y1 - y) * temp0 + (y - y0) * temp1
+
+def scaleLin(im, k, repeatEdge=False):
     '''Takes an image and a scale factor. Returns an image scaled using bilinear interpolation.
     '''
+    out = io.constantIm(im.shape[0] * k, im.shape[1] * k, 0)
+    for y, x in imIter(out):
+        out[y, x] = interpolateLin(im, float(y)/k, float(x)/k, repeatEdge)
+    return out
 
 def rotate(im, theta):
     '''takes an image and an angle in radians as input
         returns an image of the same size and rotated by theta
     '''
-
+    out = io.constantIm(im.shape[0], im.shape[1], 0)
+    halfX = int(im.shape[1] / 2)
+    halfY = int(im.shape[0] / 2)
+    inverseRotateM = np.array([[math.cos(theta), -math.sin(theta)],
+                               [math.sin(theta), math.cos(theta)]])
+    for y, x in imIter(out):
+        origImgPos = np.dot(inverseRotateM, np.array([x - halfX, y - halfY])) + np.array([halfX, halfY])
+        out[y, x] = interpolateLin(im, origImgPos[1], origImgPos[0])
+    return out
 
 class segment:
     def __init__(self, x1, y1, x2, y2):
@@ -55,7 +107,7 @@ class segment:
         self.Q=np.array([y2, x2], dtype=np.float64)
         #You can precompute more variables here
         #...
-    
+
 
     def uv(self, X):
         '''Take the (y,x) coord given by X and return u, v values
@@ -65,7 +117,7 @@ class segment:
     def dist (self, X):
         '''returns distance from point X to the segment (pill shape dist)
         '''
-    
+
     def uvtox(self,u,v):
         '''take the u,v values and return the corresponding point (that is, the np.array([y, x]))
         '''
@@ -73,7 +125,7 @@ class segment:
 
 
 def warpBy1(im, segmentBefore, segmentAfter):
-    '''Takes an image, one before segment, and one after segment. 
+    '''Takes an image, one before segment, and one after segment.
         Returns an image that has been warped according to the two segments.
     '''
 
