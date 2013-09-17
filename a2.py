@@ -152,7 +152,7 @@ def warpBy1(im, segmentBefore, segmentAfter):
 def weight(s, X, a=10, b=1, p=1):
     '''Returns the weight of segment s on point X
     '''
-    length = np.dot(s.Q - s.P, s.Q - s.P)
+    length = math.sqrt(np.dot(s.Q - s.P, s.Q - s.P))
     return (length ** p / (a + s.dist(X))) ** b
 
 def warp(im, segmentsBefore, segmentsAfter, a=10, b=1, p=1):
