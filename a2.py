@@ -105,34 +105,44 @@ class segment:
         #notice that the ui gives you x,y and we are storing as y,x
         self.P=np.array([y1, x1], dtype=np.float64)
         self.Q=np.array([y2, x2], dtype=np.float64)
-        #You can precompute more variables here
-        #...
 
+        self.PQ = self.Q - self.P
+        self.PQperp = np.dot(np.array([[0, 1], [-1, 0]]), self.PQ)
+        self.PQNormSquared = np.dot(self.PQ, self.PQ)
 
     def uv(self, X):
         '''Take the (y,x) coord given by X and return u, v values
         '''
+        u = np.dot(X - self.P, self.PQ) / self.PQNormSquared
+        v = np.dot(X - self.P, self.PQperp) / math.sqrt(self.PQNormSquared)
         return u, v
 
     def dist (self, X):
         '''returns distance from point X to the segment (pill shape dist)
         '''
+        return abs(self.uv(X)[1])
 
     def uvtox(self,u,v):
         '''take the u,v values and return the corresponding point (that is, the np.array([y, x]))
         '''
-
+        return self.P + u * self.PQ + v * self.PQperp / math.sqrt(self.PQNormSquared)
 
 
 def warpBy1(im, segmentBefore, segmentAfter):
     '''Takes an image, one before segment, and one after segment.
         Returns an image that has been warped according to the two segments.
     '''
-
+    out = io.constantIm(im.shape[0], im.shape[1], 0)
+    for y, x in imIter(out):
+        u, v = segmentAfter.uv(np.array([y, x]))
+        Xprime = segmentBefore.uvtox(u, v)
+        out[y, x] = interpolateLin(im, Xprime[0], Xprime[1], True)
+    return out
 
 def weight(s, X):
     '''Returns the weight of segment s on point X
     '''
+
 
 def warp(im, segmentsBefore, segmentsAfter, a=10, b=1, p=1):
     '''Takes an image, a list of before segments, a list of after segments, and the parameters a,b,p (see Beier)
