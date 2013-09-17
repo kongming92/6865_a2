@@ -2,6 +2,7 @@
 import numpy as np
 import math
 import imageIO as io
+import itertools
 
 
 #this file should only contain function definitions.
@@ -51,7 +52,7 @@ def scaleNN(im, k):
     for y, x in imIter(out):
         origY = clipY(im, int(round(y/k)))
         origX = clipX(im, int(round(x/k)))
-        out[y, x] = im[origY, origX]
+        out[y, x] = pix(im, origY, origX)
 
     return out
 
@@ -120,12 +121,21 @@ class segment:
     def dist (self, X):
         '''returns distance from point X to the segment (pill shape dist)
         '''
-        return abs(self.uv(X)[1])
+        return min(abs(self.uv(X)[1]), np.dot(X - self.P, X - self.P), np.dot(X - self.Q, X - self.Q))
 
     def uvtox(self,u,v):
         '''take the u,v values and return the corresponding point (that is, the np.array([y, x]))
         '''
         return self.P + u * self.PQ + v * self.PQperp / math.sqrt(self.PQNormSquared)
+
+    def __add__(self, s):
+        return segment(self.P[1] + s.P[1], self.P[0] + s.P[0], self.Q[1] + s.Q[1], self.Q[0] + s.Q[0])
+
+    def __mul__(self, k):
+        return segment(k * self.P[1], k * self.P[0], k * self.Q[1], k * self.Q[0])
+
+    def __repr__(self):
+        return "segment(%f, %f, %f, %f)" % (self.P[1], self.P[0], self.Q[1], self.Q[0])
 
 
 def warpBy1(im, segmentBefore, segmentAfter):
@@ -139,15 +149,30 @@ def warpBy1(im, segmentBefore, segmentAfter):
         out[y, x] = interpolateLin(im, Xprime[0], Xprime[1], True)
     return out
 
-def weight(s, X):
+def weight(s, X, a=10, b=1, p=1):
     '''Returns the weight of segment s on point X
     '''
-
+    length = np.dot(s.Q - s.P, s.Q - s.P)
+    return (length ** p / (a + s.dist(X))) ** b
 
 def warp(im, segmentsBefore, segmentsAfter, a=10, b=1, p=1):
     '''Takes an image, a list of before segments, a list of after segments, and the parameters a,b,p (see Beier)
     '''
-
+    out = io.constantIm(im.shape[0], im.shape[1], 0)
+    for y, x in imIter(out):
+        dsum = (0, 0)
+        weightsum = 0
+        X = np.array([y, x])
+        for before, after in itertools.izip(segmentsBefore, segmentsAfter):
+            u, v = after.uv(X)
+            Xprime_i = before.uvtox(u, v)
+            D_i = Xprime_i - X
+            w_i = weight(after, X)
+            dsum += D_i * w_i
+            weightsum += w_i
+        Xprime = X + dsum / weightsum
+        out[y, x] = interpolateLin(im, Xprime[0], Xprime[1], True)
+    return out
 
 def morph(im1, im2, segmentsBefore, segmentsAfter, N=1, a=10, b=1, p=1):
     '''Takes two images, a list of before segments, a list of after segments, the number of morph images to create, and parameters a,b,p.
@@ -155,5 +180,17 @@ def morph(im1, im2, segmentsBefore, segmentsAfter, N=1, a=10, b=1, p=1):
     '''
     sequence=list()
     sequence.append(im1.copy())
-    #add the rest of the morph images
-    return sequence
+    l1 = []
+    l2 = []
+    for i in xrange(1, N+1):
+        t = float(i) / (N+1)
+        print t
+        newSeg = segmentsBefore * (1-t) + segmentsAfter * t
+        int1 = warp(im1, segmentsBefore, newSeg)
+        int2 = warp(im2, segmentsAfter, newSeg)
+        morphIm = (1-t) * int1 + t * int2
+        l1.append(int1)
+        l2.append(int2)
+        sequence.append(morphIm)
+    sequence.append(im2.copy())
+    return sequence, l1, l2
