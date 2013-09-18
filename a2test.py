@@ -3,6 +3,7 @@ import imageIO as io
 import numpy as np
 import math
 
+panda_small = io.imread("panda.png")
 panda = io.imread("panda2.png")
 bear = io.imread("bear.png")
 fredo = io.imread("fredo2.png")
@@ -11,6 +12,7 @@ werewolf = io.imread("werewolf.png")
 # Test scaling
 io.imwrite(scaleNN(panda, 2.5), "pandaNN_2.5.png")
 io.imwrite(scaleNN(panda, 0.5), "pandaNN_0.5.png")
+io.imwrite(scaleLin(panda_small, 2.5), "pandaLinSmall_2.5.png")
 io.imwrite(scaleLin(panda, 2.5), "pandaLin_2.5.png")
 io.imwrite(scaleLin(panda, 0.5), "pandaLin_0.5.png")
 io.imwrite(scaleLin(fredo, 2.5), "fredoLin_2.5.png")

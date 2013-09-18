@@ -60,10 +60,19 @@ def interpolateLin(im, y, x, repeatEdge=False):
     '''takes an image, y and x coordinates, and a bool
         returns the interpolated pixel value using bilinear interpolation
     '''
+    xmax, ymax = im.shape[1], im.shape[0]
     x0 = int(math.floor(x))
     x1 = int(math.ceil(x))
     y0 = int(math.floor(y))
     y1 = int(math.ceil(y))
+
+    # To make sure that there is no darker border on right and bottom
+    # i.e. A picture with dimensions xmax X ymax has indices (0...xmax-1) and (0...ymax-1)
+    # So attempting to get the picture value at (xmax, ymax) will result in it fetching black
+    if x1 == xmax:
+        x1 -= 1
+    if y1 == ymax:
+        y1 -= 1
 
     if x0 == x1:
         temp0 = pix(im, y0, x0, repeatEdge)
