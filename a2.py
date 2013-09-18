@@ -121,7 +121,7 @@ class segment:
     def dist (self, X):
         '''returns distance from point X to the segment (pill shape dist)
         '''
-        return min(abs(self.uv(X)[1]), np.dot(X - self.P, X - self.P), np.dot(X - self.Q, X - self.Q))
+        return min(abs(self.uv(X)[1]), math.sqrt(np.dot(X - self.P, X - self.P)), math.sqrt(np.dot(X - self.Q, X - self.Q)))
 
     def uvtox(self,u,v):
         '''take the u,v values and return the corresponding point (that is, the np.array([y, x]))
@@ -180,17 +180,12 @@ def morph(im1, im2, segmentsBefore, segmentsAfter, N=1, a=10, b=1, p=1):
     '''
     sequence=list()
     sequence.append(im1.copy())
-    l1 = []
-    l2 = []
     for i in xrange(1, N+1):
         t = float(i) / (N+1)
-        print t
         newSeg = segmentsBefore * (1-t) + segmentsAfter * t
         int1 = warp(im1, segmentsBefore, newSeg)
         int2 = warp(im2, segmentsAfter, newSeg)
         morphIm = (1-t) * int1 + t * int2
-        l1.append(int1)
-        l2.append(int2)
         sequence.append(morphIm)
     sequence.append(im2.copy())
-    return sequence, l1, l2
+    return sequence
