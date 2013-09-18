@@ -60,19 +60,10 @@ def interpolateLin(im, y, x, repeatEdge=False):
     '''takes an image, y and x coordinates, and a bool
         returns the interpolated pixel value using bilinear interpolation
     '''
-    xmax, ymax = im.shape[1], im.shape[0]
     x0 = int(math.floor(x))
     x1 = int(math.ceil(x))
     y0 = int(math.floor(y))
     y1 = int(math.ceil(y))
-
-    # To make sure that there is no darker border on right and bottom
-    # i.e. A picture with dimensions xmax X ymax has indices (0...xmax-1) and (0...ymax-1)
-    # So attempting to get the picture value at (xmax, ymax) will result in it fetching black
-    if x1 == xmax:
-        x1 -= 1
-    if y1 == ymax:
-        y1 -= 1
 
     if x0 == x1:
         temp0 = pix(im, y0, x0, repeatEdge)
@@ -88,12 +79,12 @@ def interpolateLin(im, y, x, repeatEdge=False):
     # Otherwise, interpolate between y's
     return (y1 - y) * temp0 + (y - y0) * temp1
 
-def scaleLin(im, k, repeatEdge=False):
+def scaleLin(im, k):
     '''Takes an image and a scale factor. Returns an image scaled using bilinear interpolation.
     '''
     out = io.constantIm(im.shape[0] * k, im.shape[1] * k, 0)
     for y, x in imIter(out):
-        out[y, x] = interpolateLin(im, float(y)/k, float(x)/k, repeatEdge)
+        out[y, x] = interpolateLin(im, float(y)/k, float(x)/k, True)
     return out
 
 def rotate(im, theta):
