@@ -121,7 +121,12 @@ class segment:
     def dist (self, X):
         '''returns distance from point X to the segment (pill shape dist)
         '''
-        return min(abs(self.uv(X)[1]), math.sqrt(np.dot(X - self.P, X - self.P)), math.sqrt(np.dot(X - self.Q, X - self.Q)))
+        u, v = self.uv(X)
+        if u < 0:
+            return math.sqrt(np.dot(X - self.P, X - self.P))
+        elif u > 1:
+            return math.sqrt(np.dot(X - self.Q, X - self.Q))
+        return abs(v)
 
     def uvtox(self,u,v):
         '''take the u,v values and return the corresponding point (that is, the np.array([y, x]))
